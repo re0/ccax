@@ -1,15 +1,22 @@
-FROM node:latest
-EXPOSE 3000
-WORKDIR /app
-COPY files/* /app/
+FROM node:18-alpine
 
-RUN apt-get update &&\
-    apt-get install -y iproute2 &&\
-    npm install -r package.json &&\
-    npm install -g pm2 &&\
-    wget -O cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb &&\
-    dpkg -i cloudflared.deb &&\
-    rm -f cloudflared.deb &&\
-    chmod +x web.js
+# Create app directory
+WORKDIR /usr/src/app
 
-ENTRYPOINT [ "node", "server.js" ]
+# Install app dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# where available (npm@5+)
+COPY package*.json ./
+
+RUN npm install
+
+# Bundle app source
+COPY . .
+
+# Create a new user with UID 10014
+RUN addgroup -g 10014 choreo && \
+    adduser  --disabled-password  --no-create-home --uid 10014 --ingroup choreo choreouser
+# Set a non-root user
+USER 10014
+
+CMD [ "node", "index.mjs" ]
